@@ -4,9 +4,11 @@ image_analyzer.py
 
 
 
-Main module for the Image Analyzer Project.
+Main Image Analyzer Module
 
 """
+
+
 
 import os
 
@@ -15,6 +17,24 @@ import cv2
 import time
 
 import logging
+
+
+
+from base_analyzer import BaseAnalyzer
+
+
+
+from custom_exceptions import (
+
+    InvalidImageError,
+
+    UnsupportedFormatError
+
+)
+
+
+
+from statistics import ImageStatistics
 
 
 
@@ -36,7 +56,9 @@ from file_handler import (
 
     get_image_files,
 
-    get_file_size
+    get_file_size,
+
+    is_supported_image
 
 )
 
@@ -66,11 +88,25 @@ from utils import (
 
 
 
-class ImageAnalyzer:
+class ImageAnalyzer(BaseAnalyzer):
 
     """
 
     Image Analyzer Class
+
+    Demonstrates:
+
+    - Inheritance
+
+    - Encapsulation
+
+    - Abstraction
+
+    - Static Method
+
+    - Class Method
+
+    - Property
 
     """
 
@@ -88,6 +124,10 @@ class ImageAnalyzer:
 
 
 
+        self.__analysis_count = 0
+
+
+
         self.report_data = []
 
 
@@ -96,17 +136,63 @@ class ImageAnalyzer:
 
 
 
-    # ----------------------------------------------------
+    # --------------------------------------------------
+
+
+
+    @property
+
+    def analysis_count(self):
+
+        return self.__analysis_count
+
+
+
+    # --------------------------------------------------
+
+
+
+    @staticmethod
+
+    def project_version():
+
+        return "Version 2.0"
+
+
+
+    # --------------------------------------------------
+
+
+
+    @classmethod
+
+    def project_name(cls):
+
+        return "Python OpenCV Image Analyzer"
+
+
+
+    # --------------------------------------------------
+
+
+
+    def __str__(self):
+
+        return (
+
+            f"ImageAnalyzer("
+
+            f"Processed={self.analysis_count})"
+
+        )
+
+
+
+    # --------------------------------------------------
 
 
 
     def analyze_images(self):
-
-        """
-
-        Reads all images and starts processing.
-
-        """
 
 
 
@@ -142,7 +228,11 @@ class ImageAnalyzer:
 
 
 
-        for index, image_path in enumerate(image_files, start=1):
+        for index, image_path in enumerate(
+
+                image_files,
+
+                start=1):
 
 
 
@@ -154,7 +244,9 @@ class ImageAnalyzer:
 
             print(
 
-                f"Processing Image {index} of {self.total_images}"
+                f"Processing Image "
+
+                f"{index} of {self.total_images}"
 
             )
 
@@ -176,6 +268,38 @@ class ImageAnalyzer:
 
 
 
+            except InvalidImageError as error:
+
+
+
+                self.failed_count += 1
+
+
+
+                logging.exception(error)
+
+
+
+                print(error)
+
+
+
+            except UnsupportedFormatError as error:
+
+
+
+                self.failed_count += 1
+
+
+
+                logging.exception(error)
+
+
+
+                print(error)
+
+
+
             except Exception as error:
 
 
@@ -184,11 +308,11 @@ class ImageAnalyzer:
 
 
 
-                logging.error(error)
+                logging.exception(error)
 
 
 
-                print(f"\n✗ Failed : {error}")
+                print(error)
 
 
 
@@ -200,17 +324,23 @@ class ImageAnalyzer:
 
 
 
-    # ----------------------------------------------------
+    # --------------------------------------------------
 
 
 
     def process_image(self, image_path):
 
-        """
 
-        Processes one image.
 
-        """
+        if not is_supported_image(image_path):
+
+
+
+            raise UnsupportedFormatError(
+
+                "Unsupported Image Format"
+
+            )
 
 
 
@@ -222,15 +352,47 @@ class ImageAnalyzer:
 
 
 
-            raise ValueError(
+            raise InvalidImageError(
 
-                "Corrupted or Unsupported Image."
+                "Unable to Read Image"
 
             )
 
 
 
         height, width, channels = image.shape
+
+
+
+        if width <= 0 or height <= 0:
+
+
+
+            raise ValueError(
+
+                "Invalid Image Resolution"
+
+            )
+
+
+
+        pixels = ImageStatistics.calculate_pixels(
+
+            width,
+
+            height
+
+        )
+
+
+
+        megapixels = ImageStatistics.megapixels(
+
+            width,
+
+            height
+
+        )
 
 
 
@@ -304,93 +466,15 @@ class ImageAnalyzer:
 
             image_type,
 
-            file_size
+            file_size,
+
+            pixels,
+
+            megapixels
 
         )
 
-
-
-        gray_image = self.convert_grayscale(
-
-            image
-
-        )
-
-
-
-        resized_image = self.resize_image(
-
-            gray_image
-
-        )
-
-
-
-        self.save_image(
-
-            gray_image,
-
-            resized_image,
-
-            filename
-
-        )
-
-
-
-        self.report_data.append({
-
-
-
-            "name": filename,
-
-
-
-            "extension": extension,
-
-
-
-            "resolution": resolution,
-
-
-
-            "orientation": orientation,
-
-
-
-            "aspect_ratio": aspect_ratio,
-
-
-
-            "channels": channels,
-
-
-
-            "type": image_type,
-
-
-
-            "size": file_size
-
-
-
-        })
-
-
-
-        self.success_count += 1
-
-
-
-        logging.info(
-
-            f"{filename} Processed Successfully."
-
-        )
-
-
-
-    # ----------------------------------------------------
+    # --------------------------------------------------
 
 
 
@@ -412,7 +496,11 @@ class ImageAnalyzer:
 
         image_type,
 
-        file_size
+        file_size,
+
+        pixels,
+
+        megapixels
 
     ):
 
@@ -426,47 +514,31 @@ class ImageAnalyzer:
 
         print(f"Image Name      : {filename}")
 
-
-
         print(f"Extension       : {extension}")
-
-
 
         print(f"Resolution      : {resolution}")
 
-
-
         print(f"Orientation     : {orientation}")
-
-
 
         print(f"Aspect Ratio    : {aspect_ratio}")
 
-
-
         print(f"Channels        : {channels}")
-
-
 
         print(f"Image Type      : {image_type}")
 
-
-
         print(f"File Size       : {file_size} MB")
 
+        print(f"Pixels          : {pixels}")
+
+        print(f"Megapixels      : {megapixels}")
 
 
-    # ----------------------------------------------------
+
+    # --------------------------------------------------
 
 
 
-    def convert_grayscale(
-
-        self,
-
-        image
-
-    ):
+    def convert_grayscale(self, image):
 
         """
 
@@ -486,17 +558,11 @@ class ImageAnalyzer:
 
 
 
-    # ----------------------------------------------------
+    # --------------------------------------------------
 
 
 
-    def resize_image(
-
-        self,
-
-        image
-
-    ):
+    def resize_image(self, image):
 
         """
 
@@ -508,11 +574,7 @@ class ImageAnalyzer:
 
         return cv2.resize(
 
-
-
             image,
-
-
 
             (
 
@@ -522,11 +584,11 @@ class ImageAnalyzer:
 
             )
 
-
-
         )
 
-    # ----------------------------------------------------
+
+
+    # --------------------------------------------------
 
 
 
@@ -602,7 +664,7 @@ class ImageAnalyzer:
 
 
 
-    # ----------------------------------------------------
+    # --------------------------------------------------
 
 
 
@@ -642,93 +704,33 @@ class ImageAnalyzer:
 
                 for index, data in enumerate(
 
-                    self.report_data,
+                        self.report_data,
 
-                    start=1
-
-                ):
+                        start=1):
 
 
 
-                    report.write(
+                    report.write(f"Image {index}\n")
 
-                        f"Image {index}\n"
-
-                    )
+                    report.write("-" * 40 + "\n")
 
 
 
-                    report.write(
+                    report.write(f"Image Name      : {data['name']}\n")
 
-                        "-" * 40 + "\n"
+                    report.write(f"Extension       : {data['extension']}\n")
 
-                    )
+                    report.write(f"Resolution      : {data['resolution']}\n")
 
+                    report.write(f"Orientation     : {data['orientation']}\n")
 
+                    report.write(f"Aspect Ratio    : {data['aspect_ratio']}\n")
 
-                    report.write(
+                    report.write(f"Channels        : {data['channels']}\n")
 
-                        f"Image Name      : {data['name']}\n"
+                    report.write(f"Image Type      : {data['type']}\n")
 
-                    )
-
-
-
-                    report.write(
-
-                        f"Extension       : {data['extension']}\n"
-
-                    )
-
-
-
-                    report.write(
-
-                        f"Resolution      : {data['resolution']}\n"
-
-                    )
-
-
-
-                    report.write(
-
-                        f"Orientation     : {data['orientation']}\n"
-
-                    )
-
-
-
-                    report.write(
-
-                        f"Aspect Ratio    : {data['aspect_ratio']}\n"
-
-                    )
-
-
-
-                    report.write(
-
-                        f"Channels        : {data['channels']}\n"
-
-                    )
-
-
-
-                    report.write(
-
-                        f"Image Type      : {data['type']}\n"
-
-                    )
-
-
-
-                    report.write(
-
-                        f"File Size       : {data['size']} MB\n"
-
-                    )
-
-
+                    report.write(f"File Size       : {data['size']} MB\n")
 
                     report.write("\n")
 
@@ -746,11 +748,7 @@ class ImageAnalyzer:
 
 
 
-            logging.error(
-
-                f"Report Generation Failed : {error}"
-
-            )
+            logging.exception(error)
 
 
 
@@ -762,17 +760,11 @@ class ImageAnalyzer:
 
 
 
-    # ----------------------------------------------------
+    # --------------------------------------------------
 
 
 
     def display_summary(self):
-
-        """
-
-        Displays project summary.
-
-        """
 
 
 
@@ -796,7 +788,7 @@ class ImageAnalyzer:
 
         print(
 
-            f"Total Images        : {self.total_images}"
+            f"Total Images            : {self.total_images}"
 
         )
 
@@ -804,7 +796,7 @@ class ImageAnalyzer:
 
         print(
 
-            f"Successfully Processed : {self.success_count}"
+            f"Successfully Processed  : {self.success_count}"
 
         )
 
@@ -812,7 +804,7 @@ class ImageAnalyzer:
 
         print(
 
-            f"Failed Images       : {self.failed_count}"
+            f"Failed Images           : {self.failed_count}"
 
         )
 
@@ -820,7 +812,7 @@ class ImageAnalyzer:
 
         print(
 
-            f"Output Folder       : output_images"
+            f"Analysis Count          : {self.analysis_count}"
 
         )
 
@@ -828,7 +820,7 @@ class ImageAnalyzer:
 
         print(
 
-            f"Report File         : image_report.txt"
+            f"Output Folder           : output_images"
 
         )
 
@@ -836,7 +828,7 @@ class ImageAnalyzer:
 
         print(
 
-            f"Execution Time      : {execution_time:.2f} Seconds"
+            f"Execution Time          : {execution_time:.2f} Seconds"
 
         )
 
@@ -846,11 +838,7 @@ class ImageAnalyzer:
 
 
 
-        logging.info(
-
-            "Image Analysis Completed."
-
-        )
+        logging.info("Image Analysis Completed.")
 
 
 
@@ -880,6 +868,22 @@ class ImageAnalyzer:
 
         logging.info(
 
-            f"Execution Time : {execution_time:.2f} Seconds"
+            f"Execution Time : {execution_time:.2f}"
 
         )
+
+
+
+    # --------------------------------------------------
+
+
+
+    def analyze(self):
+
+        """
+
+        Implementation of abstract method.
+
+        """
+
+        self.analyze_images()
