@@ -1,10 +1,13 @@
 services:
   image-analyzer:
     build: .
+    image: akramkhan18/image-analyzer:v1.0
     container_name: image-analyzer-container
+
     volumes:
       - ./input_images:/app/input_images
       - ./output_images:/app/output_images
       - ./reports:/app/reports
       - ./logs:/app/logs
+
     restart: "no"
