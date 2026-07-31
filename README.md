@@ -60,3 +60,18 @@ ImageAnalyzer/
 ```bash
 python main.py
 ```
+## Docker
+
+### Build
+
+docker build -t image-analyzer:v1 .
+
+### Run
+
+docker run --name image-analyzer-container image-analyzer:v1
+
+### Docker Compose
+
+docker compose up
+
+docker compose down
