@@ -1,0 +1,10 @@
+services:
+  image-analyzer:
+    build: .
+    container_name: image-analyzer-container
+    volumes:
+      - ./input_images:/app/input_images
+      - ./output_images:/app/output_images
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    restart: "no"
